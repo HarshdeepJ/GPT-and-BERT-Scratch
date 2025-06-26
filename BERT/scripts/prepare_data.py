@@ -60,7 +60,7 @@ def create_sentence_pairs(sentences):
         else:
             random_idx = random.randint(0, num_sentences - 1)
             while random_idx == i or random_idx == i+1:
-                random_idx = random.randomint(0, num_sentences - 1)
+                random_idx = random.randint(0, num_sentences - 1)
             sent_b = sentences[random_idx]
             is_next = 1
         pairs.append((sent_a, sent_b, is_next))
@@ -101,8 +101,9 @@ def create_training_example(pair, tokenizer, max_len, mask_prob):
             if random.random() < 0.8:
                 mlm_input_tokens[i] = '[MASK]'
             elif random.random() < 0.5:
-                random_word_id = random.randint(len(tokenizer.word_to_idx._fields), tokenizer.vocab_size - 1)
-                mlm_input_tokens[i] = token.idx_to_word[random_word_id]
+                num_special_tokens = 5
+                random_word_id = random.randint(num_special_tokens, tokenizer.vocab_size - 1)
+                mlm_input_tokens[i] = tokenizer.idx_to_word[random_word_id]
         
         input_ids = tokenizer.convert_tokens_to_ids(mlm_input_tokens)
         padding_len = max_len - len(input_ids)
@@ -111,13 +112,13 @@ def create_training_example(pair, tokenizer, max_len, mask_prob):
 
         attention_mask = [1] * (len(tokens)) + [0] * padding_len
 
-        return {
-            'input_ids': torch.tensor(input_ids, dtype = torch.long),
-            'segment_ids': torch.tensor(segment_ids, dtype = torch.long),
-            'attention_mask': torch.tensor(attention_mask, dtype = torch.long),
-            'mlm_labels': torch.tensor(mlm_labels, dtype = torch.long),
-            'nsp_label': torch.tensor(nsp_label, dtype = torch.long),
-        }
+    return {
+        'input_ids': torch.tensor(input_ids, dtype = torch.long),
+        'segment_ids': torch.tensor(segment_ids, dtype = torch.long),
+        'attention_mask': torch.tensor(attention_mask, dtype = torch.long),
+        'mlm_labels': torch.tensor(mlm_labels, dtype = torch.long),
+        'nsp_label': torch.tensor(nsp_label, dtype = torch.long),
+    }
     
 def main():
     project_root = Path(__file__).parent.parent
