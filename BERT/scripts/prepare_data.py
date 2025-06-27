@@ -79,45 +79,54 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_num_tokens):
 
 def create_training_example(pair, tokenizer, max_len, mask_prob):
     sent_a, sent_b, nsp_label = pair
+    
     tokens_a = tokenizer.tokenize(sent_a)
     tokens_b = tokenizer.tokenize(sent_b)
 
     _truncate_seq_pair(tokens_a, tokens_b, max_len - 3)
+    
     tokens = ['[CLS]'] + tokens_a + ['[SEP]'] + tokens_b + ['[SEP]']
-
-    segment_ids = [0]*(len(tokens_a) + 2) + [1]*(len(tokens_b) + 1)
+    segment_ids = [0] * (len(tokens_a) + 2) + [1] * (len(tokens_b) + 1)
 
     mlm_input_tokens = list(tokens)
     mlm_labels = [-100] * max_len
 
+    num_special_tokens = 5
     for i, token in enumerate(tokens):
         if token in ['[CLS]', '[SEP]']:
             continue
 
         if random.random() < mask_prob:
             original_token_id = tokenizer.convert_tokens_to_ids([token])[0]
+            if original_token_id is None:
+                continue
             mlm_labels[i] = original_token_id
 
             if random.random() < 0.8:
                 mlm_input_tokens[i] = '[MASK]'
             elif random.random() < 0.5:
-                num_special_tokens = 5
                 random_word_id = random.randint(num_special_tokens, tokenizer.vocab_size - 1)
                 mlm_input_tokens[i] = tokenizer.idx_to_word[random_word_id]
-        
-        input_ids = tokenizer.convert_tokens_to_ids(mlm_input_tokens)
-        padding_len = max_len - len(input_ids)
-        input_ids.extend([0] * padding_len)
-        segment_ids.extend([0] * padding_len)
+            # else, keep original token (no-op)
 
-        attention_mask = [1] * (len(tokens)) + [0] * padding_len
+    # --- FIX: THIS ENTIRE BLOCK IS NOW DE-INDENTED ---
+    # It now runs AFTER the `for` loop has finished.
+    input_ids = tokenizer.convert_tokens_to_ids(mlm_input_tokens)
+    
+    # Pad all sequences to max_len
+    padding_len = max_len - len(input_ids)
+    
+    input_ids.extend([0] * padding_len)
+    segment_ids.extend([0] * padding_len)
+    
+    attention_mask = [1] * len(tokens) + [0] * padding_len
 
     return {
-        'input_ids': torch.tensor(input_ids, dtype = torch.long),
-        'segment_ids': torch.tensor(segment_ids, dtype = torch.long),
-        'attention_mask': torch.tensor(attention_mask, dtype = torch.long),
-        'mlm_labels': torch.tensor(mlm_labels, dtype = torch.long),
-        'nsp_label': torch.tensor(nsp_label, dtype = torch.long),
+        'input_ids': torch.tensor(input_ids, dtype=torch.long),
+        'segment_ids': torch.tensor(segment_ids, dtype=torch.long),
+        'attention_mask': torch.tensor(attention_mask, dtype=torch.long),
+        'mlm_labels': torch.tensor(mlm_labels, dtype=torch.long),
+        'nsp_label': torch.tensor(nsp_label, dtype=torch.long),
     }
     
 def main():
@@ -126,9 +135,9 @@ def main():
     processed_data_dir = project_root / 'data' / 'processed'
     tokenizer_path = project_root / 'data' / 'tokenizer.pkl'
 
-    processed_data_dir.mkdir(parents = True, exist_ok = True)
+    processed_data_dir.mkdir(parents=True, exist_ok=True)
     print('Step 1: Reading and Cleaning Text: ')
-    with open(raw_data_path, 'r', encoding = 'utf-8') as f:
+    with open(raw_data_path, 'r', encoding='utf-8') as f:
         raw_text = f.read()
     
     cleaned_text = clean_text(raw_text)
@@ -154,13 +163,23 @@ def main():
 
     print('Step 4: Generating and saving training examples...')
     training_examples = []
-    for pair in tqdm(sentence_pairs, desc = 'Creating examples'):
+    for pair in tqdm(sentence_pairs, desc='Creating examples'):
         example = create_training_example(pair, tokenizer, MAX_SEQ_LEN, MASK_PROB)
-        training_examples.append(example)
+        # FIX: The original code returned None sometimes. Add a check.
+        if example:
+            training_examples.append(example)
     
     output_file = processed_data_dir / 'bert_data.pkl'
     with open(output_file, 'wb') as f:
         pickle.dump(training_examples, f)
+
+    # Add this final check to be sure
+    print(f"\nProcessing complete!")
+    print(f"   - Total training examples: {len(training_examples)}")
+    if training_examples:
+        print(f"   - Example 0 keys: {training_examples[0].keys()}")
+        for key, tensor in training_examples[0].items():
+            print(f"     - {key} shape: {tensor.shape}")
 
 if __name__ == '__main__':
     main()
