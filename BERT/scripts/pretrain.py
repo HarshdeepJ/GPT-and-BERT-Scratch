@@ -4,7 +4,7 @@ import pickle
 from torch.utils.data import DataLoader, Dataset
 from torch.optim import AdamW
 import pickle
-import tqdm
+from tqdm import tqdm
 from pathlib import Path
 import sys
 
@@ -58,6 +58,7 @@ def main():
         d_ff = D_FF,
         max_len = MAX_SEQ_LEN,
         dropout_prob = DROPOUT_PROB,
+        num_heads= NUM_HEADS,
     ).to(device)
 
     criterion = nn.CrossEntropyLoss(ignore_index = -100)
