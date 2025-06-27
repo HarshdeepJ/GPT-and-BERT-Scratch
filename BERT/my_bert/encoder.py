@@ -4,6 +4,7 @@ import torch.nn as nn
 
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, d_model, num_heads, d_ff, dropout_prob):
+        super().__init__()
         self.attention = MultiHeadAttention(d_model = d_model, num_heads = num_heads)
         self.ffn = PositionwiseFeedForward(d_model = d_model, d_ff = d_ff, dropout_prob = dropout_prob)
         self.norm1 = nn.LayerNorm(d_model)
