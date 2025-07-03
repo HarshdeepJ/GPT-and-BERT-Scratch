@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import os
-from .tokenizer import CharacterTokenizer
+from tokenizer import CharacterTokenizer
 
 class TextDataset(Dataset):
     def __init__(self, text_data: str, tokenizer: CharacterTokenizer, block_size: int):
